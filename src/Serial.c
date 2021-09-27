@@ -54,3 +54,25 @@ void End() {
   __USART2_CLK_DISABLE();
   __GPIOA_CLK_DISABLE();
 }
+
+void PrintInt(Serial* self,uint32_t nbSend){
+  int nbDigit = 0;
+  uint32_t number = nbSend;
+  while(number != 0) {
+      number = number / 10;
+      nbDigit++;
+  }
+  uint32_t mask = 0;
+  for(int i=0; i<=nbDigit;i++){
+      uint16_t digit = nbSend /pow(10 ,nbDigit-1-i);
+      char result = (char)digit-mask*10 + '0';
+      Send(self,&result,sizeof(char));
+      mask = digit;
+
+  }
+}
+
+void NextLine(Serial* self){
+  char nextLine[] = "\r\n";
+  Send(self,&nextLine,sizeof(nextLine));
+}
