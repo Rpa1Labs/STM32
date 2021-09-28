@@ -2,7 +2,9 @@
 
 #include "Serial.h"
 
-#include "DHT22.h"
+//#include "DHT22.h"
+
+#include "SPI.h"
 
 /** DEBUT FONCTIONS ESSENTIELLES POUR LE GPIO */
 void SysTick_Handler(void)
@@ -103,24 +105,36 @@ int main()
   Init(&serie, USARTx_BAUDRATE, USARTx_TX_PIN, USARTx_RX_PIN);
   HAL_Delay(1000);
 
-  uint8_t Okmsg[] = "OK\r\n";
-
-  Send(&serie, &Okmsg[0], sizeof(Okmsg));
+  uint8_t tempMsg[] = " Temperature: ";
+  uint8_t hydMsg[] = " Humidite: ";
 
   /*Receive(&serie,Test,4,2000);*/
 
   uint16_t Temp = 0.0;
   uint16_t Hyd = 0.0;
 
-  while (1)
+  /*while (1)
   {
     DHT22_GetTemp_Humidity(&Temp, &Hyd);
-    Send(&serie, &Okmsg[0], sizeof(Okmsg));
 
+    Send(&serie, &tempMsg[0], sizeof(tempMsg));
+    PrintInt(&serie, Temp);
+    Send(&serie, &hydMsg[0], sizeof(hydMsg));
     PrintInt(&serie, Hyd);
+    
     NextLine(&serie);
 
     HAL_Delay(4000);
+  }*/
+
+  SpiInit();
+
+  char test[] = "test";
+
+  while(1){
+    SpiSend(&test[0],sizeof(test));
+    HAL_Delay(2000);
   }
+
   return 0;
 }

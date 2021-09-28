@@ -4,7 +4,7 @@
 #include "DHT22.h"
 
 
-//Change pin mode
+//Change le pin mode
 static void ChangePinMode(uint8_t mode)
 {
     HAL_GPIO_DeInit(GPIO_DHT22, PIN_DHT22);
@@ -19,32 +19,32 @@ static void ChangePinMode(uint8_t mode)
     HAL_GPIO_Init(GPIO_DHT22, &GPIO_InitStruct);
 }
 
-//DHT Begin function
+
 static void DHT22_StartAcquisition(void)
 {
-    //Number of iterations for 30uSec
+    //Nombre d'iterations pour 30uSec
     uint32_t whileIterations = 30 * ((SystemCoreClock / 1000000)/3);
 
-    //Change data pin mode to OUTPUT
+    //Met le pin en sortie
     ChangePinMode(1);
 
-    //Put pin LOW
+    //Force la mise à 0 du pin
     HAL_GPIO_WritePin(GPIO_DHT22, PIN_DHT22, 0);
 
-    //2mSec delay
+    //délai de 2 millisecondes
     HAL_Delay(2);
 
-    //Bring pin HIGH
+    //Met le pin à Vcc
     HAL_GPIO_WritePin(GPIO_DHT22, PIN_DHT22, 1);
 
-    //30 uSec delay
+    //Délai de 30 microsecondes
     while (whileIterations--);
 
-    //Set pin as input
+    //Met le pin en entrée
     ChangePinMode(0);
 }
 
-//Read 5 bytes
+//Lecture des 5 octets
 static void DHT22_ReadRaw(uint8_t *data)
 {
     uint32_t rawBits = 0UL;
@@ -81,7 +81,7 @@ static void DHT22_ReadRaw(uint8_t *data)
         }
     }
 
-    //Copy raw data to array of bytes
+    //Copie les données brutes dans le data
 
     //Humidity
     data[0] = rawBits >> 24 ;
@@ -93,26 +93,26 @@ static void DHT22_ReadRaw(uint8_t *data)
     data[4] = checksumBits  ;
 }
 
-//Get Temperature and Humidity data
+
 uint8_t DHT22_GetTemp_Humidity(uint16_t *Temp, uint16_t *Humidity)
 {
     __GPIOA_CLK_ENABLE();
     uint8_t dataArray[5], checkSum;
     
-    //Implement Start data Aqcuisition routine
+    //Envoie le signal au capteur pour demander l'envoi des données
     DHT22_StartAcquisition();
     
-    //Aqcuire raw data
+    //Récupère les données brutes
     DHT22_ReadRaw(dataArray);
 
-    //Calculate checksum
+    //Calcule la somme de contrôle
     checkSum = 0;
     for (uint8_t k = 0; k < 4; k++)
     {
         checkSum += dataArray[k];
     }
     
-    //If checksum is valid
+    //Si la somme de contrôle est valide
     if (checkSum == dataArray[4])
     {
         *Temp = (dataArray[2] << 8) | dataArray[3];
