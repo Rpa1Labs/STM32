@@ -30,10 +30,12 @@
 */
 
 #include "RCSwitch.h"
+#include "dwt_delay.h"
 
 
 #define RECEIVE_ATTR
 #define VAR_ISR_ATTR
+
     
 
 
@@ -78,28 +80,19 @@ enum {
 };
 
 void InitRcSwitch() {
-  setRepeatTransmit(10);
+
+  DWT_Init();
+
+  setRepeatTransmit(4);
   setProtocolByNum(1);
-}
 
-uint32_t DWT_Delay_Init(void);
-
-void DWT_Delay_us(volatile uint32_t microseconds)
-{
-  uint32_t clk_cycle_start = DWT->CYCCNT;
- 
-  /* Go to number of cycles for system */
-  microseconds *= (HAL_RCC_GetHCLKFreq() / 1000000);
- 
-  /* Delay till end */
-  while ((DWT->CYCCNT - clk_cycle_start) < microseconds);
 }
 
 /**
   * Sets the protocol to send.
   */
-void setProtocol(Protocol protocol) {
-  protocol = protocol;
+void setProtocol(Protocol pProtocol) {
+  protocol = pProtocol;
 }
 
 /**
@@ -107,7 +100,7 @@ void setProtocol(Protocol protocol) {
   */
 void setProtocolByNum(int nProtocol) {
   if (nProtocol < 1 || nProtocol > numProto) {
-    nProtocol = 1;  // TODO: trigger an error, e.g. "bad protocol" ???
+    nProtocol = 1;
   }
   protocol = proto[nProtocol-1];
 }
@@ -131,215 +124,29 @@ void setPulseLength(int nPulseLength) {
 /**
  * Sets Repeat Transmits
  */
-void setRepeatTransmit(int nRepeatTransmit) {
-  nRepeatTransmit = nRepeatTransmit;
+void setRepeatTransmit(int nRepeat) {
+  nRepeatTransmit = nRepeat;
 }
   
 
 /**
  * Enable transmissions
- *
- * @param nTransmitterPin    Arduino Pin to which the sender is connected to
  */
-void enableTransmit(int nTransmitterPin) {
-  __GPIOB_CLK_ENABLE();
+void enableTransmit() {
   GPIO_InitTypeDef GPIO_InitStruct;
   GPIO_InitStruct.Pin = GPIO_PIN_RF;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   HAL_GPIO_Init(GPIO_RF, &GPIO_InitStruct);
 
-  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF,LOW);
+  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF,1);
 
-  //pinMode(nTransmitterPin, OUTPUT);
 }
 
 /**
-  * Disable transmissions
-  */
-void disableTransmit() {
-  nTransmitterPin = -1;
-}
-
-/**
- * Returns a char[13], representing the code word to be send.
- *
- */
-static char* getCodeWordA(const char* sGroup, const char* sDevice, uint8_t bStatus) {
-  static char sReturn[13];
-  int nReturnPos = 0;
-
-  for (int i = 0; i < 5; i++) {
-    sReturn[nReturnPos++] = (sGroup[i] == '0') ? 'F' : '0';
-  }
-
-  for (int i = 0; i < 5; i++) {
-    sReturn[nReturnPos++] = (sDevice[i] == '0') ? 'F' : '0';
-  }
-
-  sReturn[nReturnPos++] = bStatus ? '0' : 'F';
-  sReturn[nReturnPos++] = bStatus ? 'F' : '0';
-
-  sReturn[nReturnPos] = '\0';
-  return sReturn;
-}
-
-/**
- * Encoding for type B switches with two rotary/sliding switches.
- *
- * The code word is a tristate word and with following bit pattern:
- *
- * +-----------------------------+-----------------------------+----------+------------+
- * | 4 bits address              | 4 bits address              | 3 bits   | 1 bit      |
- * | switch group                | switch number               | not used | on / off   |
- * | 1=0FFF 2=F0FF 3=FF0F 4=FFF0 | 1=0FFF 2=F0FF 3=FF0F 4=FFF0 | FFF      | on=F off=0 |
- * +-----------------------------+-----------------------------+----------+------------+
- *
- * @param nAddressCode  Number of the switch group (1..4)
- * @param nChannelCode  Number of the switch itself (1..4)
- * @param bStatus       Whether to switch on (1) or off (0)
- *
- * @return char[13], representing a tristate code word of length 12
- */
-static char* getCodeWordB(int nAddressCode, int nChannelCode, uint8_t bStatus) {
-  static char sReturn[13];
-  int nReturnPos = 0;
-
-  if (nAddressCode < 1 || nAddressCode > 4 || nChannelCode < 1 || nChannelCode > 4) {
-    return 0;
-  }
-
-  for (int i = 1; i <= 4; i++) {
-    sReturn[nReturnPos++] = (nAddressCode == i) ? '0' : 'F';
-  }
-
-  for (int i = 1; i <= 4; i++) {
-    sReturn[nReturnPos++] = (nChannelCode == i) ? '0' : 'F';
-  }
-
-  sReturn[nReturnPos++] = 'F';
-  sReturn[nReturnPos++] = 'F';
-  sReturn[nReturnPos++] = 'F';
-
-  sReturn[nReturnPos++] = bStatus ? 'F' : '0';
-
-  sReturn[nReturnPos] = '\0';
-  return sReturn;
-}
-
-/**
- * Like getCodeWord (Type C = Intertechno)
- */
-static char* getCodeWordC(char sFamily, int nGroup, int nDevice, uint8_t bStatus) {
-  static char sReturn[13];
-  int nReturnPos = 0;
-
-  int nFamily = (int)sFamily - 'a';
-  if ( nFamily < 0 || nFamily > 15 || nGroup < 1 || nGroup > 4 || nDevice < 1 || nDevice > 4) {
-    return 0;
-  }
-  
-  // encode the family into four bits
-  sReturn[nReturnPos++] = (nFamily & 1) ? 'F' : '0';
-  sReturn[nReturnPos++] = (nFamily & 2) ? 'F' : '0';
-  sReturn[nReturnPos++] = (nFamily & 4) ? 'F' : '0';
-  sReturn[nReturnPos++] = (nFamily & 8) ? 'F' : '0';
-
-  // encode the device and group
-  sReturn[nReturnPos++] = ((nDevice-1) & 1) ? 'F' : '0';
-  sReturn[nReturnPos++] = ((nDevice-1) & 2) ? 'F' : '0';
-  sReturn[nReturnPos++] = ((nGroup-1) & 1) ? 'F' : '0';
-  sReturn[nReturnPos++] = ((nGroup-1) & 2) ? 'F' : '0';
-
-  // encode the status code
-  sReturn[nReturnPos++] = '0';
-  sReturn[nReturnPos++] = 'F';
-  sReturn[nReturnPos++] = 'F';
-  sReturn[nReturnPos++] = bStatus ? 'F' : '0';
-
-  sReturn[nReturnPos] = '\0';
-  return sReturn;
-}
-
-/**
- * Encoding for the REV Switch Type
- *
- * The code word is a tristate word and with following bit pattern:
- *
- * +-----------------------------+-------------------+----------+--------------+
- * | 4 bits address              | 3 bits address    | 3 bits   | 2 bits       |
- * | switch group                | device number     | not used | on / off     |
- * | A=1FFF B=F1FF C=FF1F D=FFF1 | 1=0FF 2=F0F 3=FF0 | 000      | on=10 off=01 |
- * +-----------------------------+-------------------+----------+--------------+
- *
- * Source: http://www.the-intruder.net/funksteckdosen-von-rev-uber-arduino-ansteuern/
- *
- * @param sGroup        Name of the switch group (A..D, resp. a..d) 
- * @param nDevice       Number of the switch itself (1..3)
- * @param bStatus       Whether to switch on (1) or off (0)
- *
- * @return char[13], representing a tristate code word of length 12
- */
-static char* getCodeWordD(char sGroup, int nDevice, uint8_t bStatus) {
-  static char sReturn[13];
-  int nReturnPos = 0;
-
-  // sGroup must be one of the letters in "abcdABCD"
-  int nGroup = (sGroup >= 'a') ? (int)sGroup - 'a' : (int)sGroup - 'A';
-  if ( nGroup < 0 || nGroup > 3 || nDevice < 1 || nDevice > 3) {
-    return 0;
-  }
-
-  for (int i = 0; i < 4; i++) {
-    sReturn[nReturnPos++] = (nGroup == i) ? '1' : 'F';
-  }
-
-  for (int i = 1; i <= 3; i++) {
-    sReturn[nReturnPos++] = (nDevice == i) ? '1' : 'F';
-  }
-
-  sReturn[nReturnPos++] = '0';
-  sReturn[nReturnPos++] = '0';
-  sReturn[nReturnPos++] = '0';
-
-  sReturn[nReturnPos++] = bStatus ? '1' : '0';
-  sReturn[nReturnPos++] = bStatus ? '0' : '1';
-
-  sReturn[nReturnPos] = '\0';
-  return sReturn;
-}
-
-/**
- * @param sCodeWord   a tristate code word consisting of the letter 0, 1, F
- */
-void sendTriState(const char* sCodeWord) {
-  // turn the tristate code word into the corresponding bit pattern, then send it
-  unsigned long code = 0;
-  unsigned int length = 0;
-  for (const char* p = sCodeWord; *p; p++) {
-    code <<= 2L;
-    switch (*p) {
-      case '0':
-        // bit pattern 00
-        break;
-      case 'F':
-        // bit pattern 01
-        code |= 1L;
-        break;
-      case '1':
-        // bit pattern 11
-        code |= 3L;
-        break;
-    }
-    length += 2;
-  }
-  send(code, length);
-}
-
-/**
- * @param sCodeWord   a binary code word consisting of the letter 0, 1
+ * send character
  */
 void sendChar(const char* sCodeWord) {
   // turn the tristate code word into the corresponding bit pattern, then send it
@@ -360,7 +167,7 @@ void sendChar(const char* sCodeWord) {
  * then the bit at position length-2, and so on, till finally the bit at position 0.
  */
 void send(unsigned long code, unsigned int length) {
-  if (nTransmitterPin == -1) return;
+  //if (nTransmitterPin == -1) return;
 
   for (int nRepeat = 0; nRepeat < nRepeatTransmit; nRepeat++) {
     for (int i = length-1; i >= 0; i--) {
@@ -373,26 +180,23 @@ void send(unsigned long code, unsigned int length) {
   }
 
   // Disable transmit after sending (i.e., for inverted protocols)
-  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF, LOW);
+  //HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF, LOW);
 
 }
 
 /**
  * Transmit a single high-low pulse.
  */
-void transmit(HighLow pulses) {
-  GPIO_PinState firstLogicLevel = (protocol.invertedSignal) ? LOW : HIGH;
-  GPIO_PinState secondLogicLevel = (protocol.invertedSignal) ? HIGH : LOW;
+static void transmit(HighLow pulses) {
+  GPIO_PinState firstLogicLevel   = (protocol.invertedSignal) ? LOW   : HIGH;
+  GPIO_PinState secondLogicLevel  = (protocol.invertedSignal) ? HIGH  : LOW;
+
+  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF,firstLogicLevel);
+  DWT_Delay(pulses.high*protocol.pulseLength);
   
-  //digitalWrite(nTransmitterPin, firstLogicLevel);
-  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF, firstLogicLevel);
-  DWT_Delay_us( protocol.pulseLength * pulses.high);
-  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF, secondLogicLevel);
-  DWT_Delay_us( protocol.pulseLength * pulses.low);
+  HAL_GPIO_WritePin(GPIO_RF, GPIO_PIN_RF,secondLogicLevel);
+  DWT_Delay(pulses.low*protocol.pulseLength);
+  
 }
 
-/* helper function for the receiveProtocol method */
-static inline unsigned int diff(int A, int B) {
-  return abs(A - B);
-}
 

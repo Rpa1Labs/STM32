@@ -1,10 +1,5 @@
 //Header files
-#include "stm32f3xx_hal.h"
-
-
-#define     GPIO_DHT22        GPIOA
-#define     PIN_DHT22         GPIO_PIN_9
-
+#include "main.h"
 
 #define     READ_PIN          HAL_GPIO_ReadPin(GPIO_DHT22, PIN_DHT22)
 

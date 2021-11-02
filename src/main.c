@@ -18,77 +18,76 @@ void SysTick_Handler(void)
 
 void SystemClock_Config(void){
 
-  RCC->CIR = 0x009F0000;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
 
-  // Turn HSE ON
-  RCC->CR |= RCC_CR_HSEON;
+    /**Configure the main internal regulator output voltage 
+    */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  // Wait Until HSE Is Ready
-  while (!(RCC->CR & RCC_CR_HSERDY));
+    /**Initializes the CPU, AHB and APB busses clocks 
+    */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = 16;
 
-  //set HSE as system clock
-  RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_SW)) | RCC_CFGR_SW_HSE;
 
-  //AHB prescaler
-  RCC->CFGR &= ~(RCC_CFGR_HPRE);   //remove old prescaler
-  RCC->CFGR |= RCC_CFGR_HPRE_DIV1; //set AHB prescaler = 1.
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    //Error
+  }
 
-  //set APB1 prescaler
-  RCC->CFGR &= ~(RCC_CFGR_PPRE1);
-  RCC->CFGR |= RCC_CFGR_PPRE1_DIV2;
+    /**Initializes the CPU, AHB and APB busses clocks 
+    */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  //set APB2 prescaler
-  RCC->CFGR &= ~(RCC_CFGR_PPRE2);
-  RCC->CFGR |= RCC_CFGR_PPRE2_DIV1;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    //Error
+  }
 
-  //set flash wait states to 2 wait states
-  FLASH->ACR &= ~(FLASH_ACR_LATENCY);
-  FLASH->ACR |= FLASH_ACR_LATENCY_2;
+    /**Configure the Systick interrupt time 
+    */
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
-  //Set HSE as PLL Source. bit set -> HSE, bit unser -> HSI
-  RCC->CFGR |= RCC_CFGR_PLLSRC;
+    /**Configure the Systick 
+    */
+  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
-  // Set HSE Prescaler On PLL Entry
-  RCC->CFGR &= ~RCC_CFGR_PLLXTPRE;
-  // RCC->CFGR |= RCC_CFGR_PLLXTPRE_HSE; //no HSE prescaler before PLL entry
+  /* SysTick_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
-  // Turn On PLL Clock
-  RCC->CR |= RCC_CR_PLLON;
-
-  // Wait Until PLL Is Ready
-  while (!(RCC->CR & RCC_CR_PLLRDY));
-
-  // Set System To PLL CLock
-  RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_SW)) | RCC_CFGR_SW_PLL;
-
-  // Clear All Interrupts
-  RCC->CIR = 0x009F0000;
 }
 
 // FIN FONCTIONS ESSENTIELLES POUR LE GPIO */
 
-//Serial serie;
 
-int main()
-{
 
-  //LED_Loop();
-  SystemClock_Config();
 
-  LED_Loop();
-  
-  /*Init(&serie, USARTx_BAUDRATE, USARTx_TX_PIN, USARTx_RX_PIN);
+void DHT22ReadAndPrint(){
+  /*Serial serie;
+  Init(&serie, USARTx_BAUDRATE, USARTx_TX_PIN, USARTx_RX_PIN);
   HAL_Delay(1000);
 
   uint8_t tempMsg[] = " Temperature: ";
-  uint8_t hydMsg[] = " Humidite: ";*/
+  uint8_t hydMsg[] = " Humidite: ";
 
-  /*Receive(&serie,Test,4,2000);*/
+  uint16_t Temp = 0.0;
+  uint16_t Hyd = 0.0;
 
-  /*uint16_t Temp = 0.0;
-  uint16_t Hyd = 0.0;*/
-
-  /*while (1)
+  while (1)
   {
     DHT22_GetTemp_Humidity(&Temp, &Hyd);
 
@@ -101,7 +100,11 @@ int main()
 
     HAL_Delay(4000);
   }*/
+}
 
+
+
+void SpiTest(){
   /*SpiInit();
 
   char test[] = "test";
@@ -110,14 +113,53 @@ int main()
     SpiSend(&test[0],sizeof(test));
     HAL_Delay(2000);
   }*/
-  //RCSwitch mySwitch = RCSwitch();
+}
 
-  /*mySwitch.enableTransmit(0);
 
+
+void RCSwitchTest(){
+  InitRcSwitch();
+  enableTransmit();
+  HAL_Delay(2000);
+  unsigned long var = 0;
   while(1){
-    mySwitch.send(12345678, 24);
+    var = (var+1)%65000;
+    send(var, 24);
     HAL_Delay(2000);
-  }*/
+  }
+}
+
+
+void UARTTest(){
+  /*Serial serie;
+  Init(&serie, USARTx_BAUDRATE, USARTx_TX_PIN, USARTx_RX_PIN);
+  uint8_t tempMsg[] = " Temperature: ";
+  Send(&serie, &tempMsg[0], sizeof(tempMsg));*/
+}
+
+
+
+int main()
+{
+
+
+
+  SystemClock_Config();
+
+  HAL_Init();
+
+  //MX_GPIO_Init();
+
+  //UARTTest();
+
+  //LED_Loop();
+
+  //DHT22ReadAndPrint();
+
+  //SpiTest();
+
+  RCSwitchTest();
+  
 
   return 0;
 }

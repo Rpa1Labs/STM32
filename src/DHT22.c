@@ -1,5 +1,3 @@
-
-
 //Header files
 #include "DHT22.h"
 
@@ -96,7 +94,6 @@ static void DHT22_ReadRaw(uint8_t *data)
 
 uint8_t DHT22_GetTemp_Humidity(uint16_t *Temp, uint16_t *Humidity)
 {
-    __GPIOA_CLK_ENABLE();
     uint8_t dataArray[5], checkSum;
     
     //Envoie le signal au capteur pour demander l'envoi des données

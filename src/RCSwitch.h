@@ -29,13 +29,10 @@
 #include <string.h> // memcpy
 #include <stdlib.h> // abs
 
-#include "stm32f3xx_hal.h"
+#include "main.h"
 
 #define HIGH GPIO_PIN_SET
 #define LOW GPIO_PIN_RESET
-
-#define GPIO_RF GPIOB
-#define GPIO_PIN_RF GPIO_PIN_10
 
 // Number of maximum high/Low changes per packet.
 // We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
@@ -47,6 +44,7 @@
      * by a low signal lasting "low" times the base pulse length.
      * Thus, the pulse overall lasts (high+low)*pulseLength
      */
+
 typedef struct{
     uint8_t high;
     uint8_t low;
@@ -83,14 +81,13 @@ typedef struct{
          * FOO.low*pulseLength microseconds.
     */
 
+//public
 void InitRcSwitch();
-
-void sendTriState(const char *sCodeWord);
 
 void send(unsigned long code, unsigned int length);
 void sendChar(const char *sCodeWord);
 
-void enableTransmit(int nTransmitterPin);
+void enableTransmit();
 void disableTransmit();
 void setPulseLength(int nPulseLength);
 void setRepeatTransmit(int nRepeatTransmit);
@@ -99,14 +96,8 @@ void setProtocol(Protocol protocol);
 void setProtocolByNum(int nProtocol);
 void setProtocolByNumLength(int nProtocol, int nPulseLength);
 
-//private:
-static char *getCodeWordA(const char *sGroup, const char *sDevice, uint8_t bStatus);
-static char *getCodeWordB(int nGroupNumber, int nSwitchNumber, uint8_t bStatus);
-static char *getCodeWordC(char sFamily, int nGroup, int nDevice, uint8_t bStatus);
-static char *getCodeWordD(char group, int nDevice, uint8_t bStatus);
+//private
 static void transmit(HighLow pulses);
 
-int nTransmitterPin;
 int nRepeatTransmit;
-
 Protocol protocol;
