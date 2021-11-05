@@ -1,4 +1,4 @@
-#include "stm32f3xx_hal.h"          // change to whatever MCU you use
+#include "stm32f3xx_hal.h"
 #include "dwt_delay.h"
 
 
@@ -14,7 +14,7 @@ void DWT_Init(void)
 }
 
 
-void DWT_Delay(uint32_t us) // microseconds
+void DWT_Delay(uint32_t us) // microsecondes
 {
     uint32_t startTick  = DWT->CYCCNT,
              targetTick = DWT->CYCCNT + us * (SystemCoreClock/1000000);

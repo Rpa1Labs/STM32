@@ -137,6 +137,24 @@ void UARTTest(){
   Send(&serie, &tempMsg[0], sizeof(tempMsg));*/
 }
 
+void readTemp_Send(){
+  InitRcSwitch();
+  enableTransmit();
+  
+  HAL_Delay(2000);
+
+  uint16_t Temp = 0.0;
+  uint16_t Hyd = 0.0;
+  while (1)
+  {
+    DHT22_GetTemp_Humidity(&Temp, &Hyd);
+
+    send((uint32_t) Temp,24);
+
+    HAL_Delay(4000);
+  }
+}
+
 
 
 int main()
@@ -158,8 +176,9 @@ int main()
 
   //SpiTest();
 
-  RCSwitchTest();
+  //RCSwitchTest();
   
+  readTemp_Send();
 
   return 0;
 }
