@@ -6,74 +6,78 @@
 
 //#include "SPI.h"
 
-#include "RCSwitch.h"
+//#include "RCSwitch.h"
 
-#include "ControlLED.h"
+//#include "ControlLED.h"
 
-/** DEBUT FONCTIONS ESSENTIELLES POUR LE GPIO */
+// TODO FAIRE LA MISE EN VEILLE
+// TODO EXECUTER LA FONCTION readTemp_Send() PENDANT l'INTERRUPTION
+
+#include "rtc.h"
+
+/** DEBUT DES FONCTIONS ESSENTIELLES POUR LE STM32 */
 void SysTick_Handler(void)
 {
   HAL_IncTick();
 }
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    /* Clear Wake Up Flag */
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+}
+
 void SystemClock_Config(void){
-
-  RCC_OscInitTypeDef RCC_OscInitStruct;
-  RCC_ClkInitTypeDef RCC_ClkInitStruct;
-
-    /**Configure the main internal regulator output voltage 
-    */
+    
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_RCC_SYSCFG_CLK_ENABLE();
-  __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-    /**Initializes the CPU, AHB and APB busses clocks 
-    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = 16;
-
-
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
-    //Error
+    //Error_Handler();
   }
-
-    /**Initializes the CPU, AHB and APB busses clocks 
-    */
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV16;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
-    //Error
+    //Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    //Error_Handler();
   }
 
-    /**Configure the Systick interrupt time 
-    */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
-
-    /**Configure the Systick 
-    */
-  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
-
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-
+  __HAL_RCC_RTC_ENABLE();
+    /* RTC interrupt Init */
+  HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
 }
 
-// FIN FONCTIONS ESSENTIELLES POUR LE GPIO */
 
-
+/** FIN DES FONCTIONS ESSENTIELLES POUR LE STM32 */
 
 
 void DHT22ReadAndPrint(){
@@ -116,7 +120,7 @@ void SpiTest(){
 }
 
 
-
+/**
 void RCSwitchTest(){
   InitRcSwitch();
   enableTransmit();
@@ -128,7 +132,7 @@ void RCSwitchTest(){
     HAL_Delay(2000);
   }
 }
-
+*/
 
 void UARTTest(){
   /*Serial serie;
@@ -136,7 +140,7 @@ void UARTTest(){
   uint8_t tempMsg[] = " Temperature: ";
   Send(&serie, &tempMsg[0], sizeof(tempMsg));*/
 }
-
+/*
 void readTemp_Send(){
   InitRcSwitch();
   enableTransmit();
@@ -147,13 +151,18 @@ void readTemp_Send(){
   uint16_t Hyd = 0.0;
   while (1)
   {
+    //set_time(0);
     DHT22_GetTemp_Humidity(&Temp, &Hyd);
 
     send((uint32_t) Temp,24);
 
-    HAL_Delay(4000);
+    //Enter_Standby_Mode();
+    sleepdelay(4);
+    //HAL_Delay(4000);
   }
 }
+*/
+
 
 
 
@@ -164,9 +173,18 @@ int main()
 
   SystemClock_Config();
 
-  HAL_Init();
+  LED_Init();
 
-  //MX_GPIO_Init();
+  HAL_Init();
+  //LED_Loop();
+
+  MX_RTC_Init();
+  
+
+  HAL_GPIO_TogglePin(LED_GPIO_PORT, LED_PIN);
+
+while(1);
+  
 
   //UARTTest();
 
@@ -178,7 +196,7 @@ int main()
 
   //RCSwitchTest();
   
-  readTemp_Send();
+  //readTemp_Send();
 
   return 0;
 }
