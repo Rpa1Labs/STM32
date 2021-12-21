@@ -8,10 +8,15 @@
 // INITIALISATION DU RTC
 void MX_RTC_Init(void)
 {
+  //Calcul de asyncPrediv et de syncPrediv en fonction de la clock de la STM32
+  uint32_t quartzFrequency = 40000;
+  uint32_t asyncPrediv = 127;
+  uint32_t syncPrediv = quartzFrequency / (asyncPrediv+1)-1;
+
   hrtc.Instance = RTC;
   hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-  hrtc.Init.AsynchPrediv = 127;
-  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.AsynchPrediv = asyncPrediv;
+  hrtc.Init.SynchPrediv = syncPrediv;
   hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
   hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
@@ -37,7 +42,7 @@ void Set_Time(){
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
   {
     //Error_Handler();
   }
@@ -47,7 +52,7 @@ void Set_Time(){
   sDate.Month = RTC_MONTH_JANUARY;
   sDate.Date = 0x1;
   sDate.Year = 0x0;
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
   {
     // Erreur
   }
@@ -59,10 +64,11 @@ void Set_Alarm(){
   RTC_AlarmTypeDef sAlarm = {0};
   
   //Met l'alarme à 1 minute
-  sAlarm.AlarmTime.Hours = 0x0;
-  sAlarm.AlarmTime.Minutes = 0x1;
-  sAlarm.AlarmTime.Seconds = 0x0;
-  sAlarm.AlarmTime.SubSeconds = 0x0;
+  //Attention: a mettre en décimal et non en hexadécimal
+  sAlarm.AlarmTime.Hours = 0;
+  sAlarm.AlarmTime.Minutes = 1;
+  sAlarm.AlarmTime.Seconds = 0;
+  sAlarm.AlarmTime.SubSeconds = 0;
 
   //Paramétrage de l'alarme pour qu'elle s'exécute qu'une seule fois
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
@@ -74,7 +80,7 @@ void Set_Alarm(){
 
   //Application des différents paramètres sur l'alarme A
   sAlarm.Alarm = RTC_ALARM_A;
-  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK)
   {
     // Erreur
   }
