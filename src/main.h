@@ -1,9 +1,18 @@
-#include "stm32f3xx.h"
+/**
+ * @file main.h
+ * @author Rpa1Labs (romain.pajon@etu.univ-orleans.fr)
+ * @brief Programme permettant d'envoyer via du 433Mhz la température d'un capteur DHT22
+ * @version 1.0
+ * @date 2021-12-21
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
 
-/** UART */
-#define     USARTx_TX_PIN       GPIO_PIN_2
-#define     USARTx_RX_PIN       GPIO_PIN_3
-#define     USARTx_BAUDRATE     115200
+//Header
+#include "stm32f3xx_hal.h"
+
+void readTemp_Send();
 
 /** DHT22 */
 #define     GPIO_DHT22          GPIOA

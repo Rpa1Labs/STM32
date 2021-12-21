@@ -4,7 +4,7 @@
 
 void DWT_Init(void)
 {
-    DWT->CTRL |= 1 ; // enable the counter
+    DWT->CTRL |= 1 ; // Active le timer
     
     if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -16,15 +16,16 @@ void DWT_Init(void)
 
 void DWT_Delay(uint32_t us) // microsecondes
 {
+    // Récupère la valeur actuelle du timer et calcule la valeur du timer à la fin du delay
     uint32_t startTick  = DWT->CYCCNT,
              targetTick = DWT->CYCCNT + us * (SystemCoreClock/1000000);
 
-    // Must check if target tick is out of bounds and overflowed
+    // Regarde s'il n'y aura pas d'overflow de la valeur pendant la boucle while ( dépassement de la valeur 4 294 967 295 )
     if (targetTick > startTick) {
-        // Not overflowed
+        // Pas d'overflow
         while (DWT->CYCCNT < targetTick);
     } else {
-        // Overflowed
+        // Overflow
         while (DWT->CYCCNT > startTick || DWT->CYCCNT < targetTick);
     }
 }

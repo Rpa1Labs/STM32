@@ -1,16 +1,19 @@
 #include "rtc.h"
 
-//#include "RCSwitch.h"
-
-#include "ControlLED.h"
-
 
 // INITIALISATION DU RTC
-void MX_RTC_Init(void)
+void RTC_Init()
 {
-  //Calcul de asyncPrediv et de syncPrediv en fonction de la clock de la STM32
-  uint32_t quartzFrequency = 40000;
-  uint32_t asyncPrediv = 127;
+  //Active la RTC
+  __HAL_RCC_RTC_ENABLE();
+  
+  // Ajout de l'interruption pour l'alarme A
+  HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
+
+  //Calcul de asyncPrediv et de syncPrediv en fonction de la clock d'entrée de la STM32
+  uint32_t quartzFrequency = 40000; // 40 kHz
+  uint32_t asyncPrediv = 127; // Valeur par défaut
   uint32_t syncPrediv = quartzFrequency / (asyncPrediv+1)-1;
 
   hrtc.Instance = RTC;
@@ -22,13 +25,12 @@ void MX_RTC_Init(void)
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   if (HAL_RTC_Init(&hrtc) != HAL_OK)
   {
-    //Error_Handler();
+    LED_Loop(); //Erreur
   }
 
-  //Setup du temps et de l'alarme  
+  //Inilialisation du temps et de l'alarme  
   Set_Time();
   Set_Alarm();
-
 
 }
 
@@ -44,7 +46,7 @@ void Set_Time(){
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
   if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
   {
-    //Error_Handler();
+    LED_Loop(); //Erreur
   }
 
   //Initialise le jour, le mois et l'année
@@ -54,7 +56,7 @@ void Set_Time(){
   sDate.Year = 0x0;
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
   {
-    // Erreur
+    LED_Loop(); //Erreur
   }
 }
 
@@ -63,12 +65,12 @@ void Set_Alarm(){
 
   RTC_AlarmTypeDef sAlarm = {0};
   
-  //Met l'alarme à 1 minute
+  //Met l'alarme au temps choisi dans le header
   //Attention: a mettre en décimal et non en hexadécimal
-  sAlarm.AlarmTime.Hours = 0;
-  sAlarm.AlarmTime.Minutes = 1;
-  sAlarm.AlarmTime.Seconds = 0;
-  sAlarm.AlarmTime.SubSeconds = 0;
+  sAlarm.AlarmTime.Hours = HOURS;
+  sAlarm.AlarmTime.Minutes = MINUTES;
+  sAlarm.AlarmTime.Seconds = SECONDS;
+  sAlarm.AlarmTime.SubSeconds = SUB_SECONDS;
 
   //Paramétrage de l'alarme pour qu'elle s'exécute qu'une seule fois
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
@@ -82,7 +84,7 @@ void Set_Alarm(){
   sAlarm.Alarm = RTC_ALARM_A;
   if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK)
   {
-    // Erreur
+    LED_Loop();
   }
 }
 
@@ -91,29 +93,3 @@ void RTC_Alarm_IRQHandler(void)
 {
   HAL_RTC_AlarmIRQHandler(&hrtc);
 }
-
-//FONCTION EXECUTEE LORS DE L'INTERRUPT
-void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef* hrtc){
-
-  //Changement d'état de la led sur le STM32
-	HAL_GPIO_TogglePin(LED_GPIO_PORT, LED_PIN);
-
-  //Re-initialise la rtc et l'alarme pour réexécuter cette fonction dans 1 minute
-  Set_Time();
-  Set_Alarm();
-}
-
-
-/*void readTemp_Send(){
-  InitRcSwitch();
-  enableTransmit();
-
-  HAL_Delay(2000);
-
-  uint16_t Temp = 0.0;
-  uint16_t Hyd = 0.0;
-
-  DHT22_GetTemp_Humidity(&Temp, &Hyd);
-
-  send((uint32_t) Temp,24);
-}*/

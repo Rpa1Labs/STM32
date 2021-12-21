@@ -1,41 +1,24 @@
-/*
-  RCSwitch - Arduino libary for remote control outlet switches
-  Copyright (c) 2011 Suat Özgür.  All right reserved.
-  Contributors:
-  - Andre Koehler / info(at)tomate-online(dot)de
-  - Gordeev Andrey Vladimirovich / gordeev(at)openpyro(dot)com
-  - Skineffect / http://forum.ardumote.com/viewtopic.php?f=2&t=46
-  - Dominik Fischer / dom_fischer(at)web(dot)de
-  - Frank Oltmanns / <first name>.<last name>(at)gmail(dot)com
-  - Max Horn / max(at)quendi(dot)de
-  - Robert ter Vehn / <first name>.<last name>(at)gmail(dot)com
-  
-  Project home: https://github.com/sui77/rc-switch/
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+/**
+ * @file RCSwitch.h
+ * @author Rpa1Labs (romain.pajon@etu.univ-orleans.fr)
+ * @brief Librairie allegée pour la transmission en 433Mhz pour la STM32, basée sur le projet: https://github.com/sui77/rc-switch/
+ * @version 1.0
+ * @date 2021-12-21
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
 
-
-#include <stdint.h>
-#include <string.h> // memcpy
-#include <stdlib.h> // abs
 
 #include "main.h"
 
 #define HIGH GPIO_PIN_SET
 #define LOW GPIO_PIN_RESET
 
-// Number of maximum high/Low changes per packet.
-// We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
+/**
+ * @brief Number of maximum high/Low changes per packet. We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
+ * 
+ */
 #define RCSWITCH_MAX_CHANGES 67
 
 /**
@@ -81,23 +64,55 @@ typedef struct{
          * FOO.low*pulseLength microseconds.
     */
 
-//public
+
+
+/**
+ * @brief Fonction pour initialiser le PIN + le protocol et le nombre de répétitions par défaut
+ * 
+ */
 void InitRcSwitch();
 
+
+/**
+ * @brief Fonction pour envoyer du binaire au module RF 433Mhz
+ * 
+ * @param code  Données à envoyer
+ * @param length Longueur en bit des données
+ */
 void send(unsigned long code, unsigned int length);
-void sendChar(const char *sCodeWord);
 
+/**
+ * @brief Initialise le PIN pour la transmission RF
+ * 
+ */
 void enableTransmit();
+
+/**
+ * @brief Dé-initialise le PIN pour la transmission RF
+ * 
+ */
 void disableTransmit();
-void setPulseLength(int nPulseLength);
-void setRepeatTransmit(int nRepeatTransmit);
 
-void setProtocol(Protocol protocol);
+/**
+ * @brief Transmet 1 bit en fonction du protocole au module RF
+ * 
+ * @param pulses pulses.one ou pulses.zero
+ */
+void transmit(HighLow pulses);
+
+/**
+ * @brief Fonction pour choisir le protocole en fonction de son numéro
+ * 
+ * @param nProtocol Numéro du protocol
+ */
 void setProtocolByNum(int nProtocol);
-void setProtocolByNumLength(int nProtocol, int nPulseLength);
 
-//private
-static void transmit(HighLow pulses);
+/**
+ * @brief Fonction pour choisir le nombre de fois que le signal sera envoyé
+ * 
+ * @param nRepeatTransmit Nombre de fois
+ */
+void setRepeatTransmit(int nRepeatTransmit);
 
 int nRepeatTransmit;
 Protocol protocol;

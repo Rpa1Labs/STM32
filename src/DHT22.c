@@ -1,9 +1,10 @@
-//Header files
+//Headers
 #include "DHT22.h"
+#include "dwt_delay.h"
 
 
 //Change le pin mode
-static void ChangePinMode(uint8_t mode)
+void ChangePinMode(uint8_t mode)
 {
     HAL_GPIO_DeInit(GPIO_DHT22, PIN_DHT22);
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -18,11 +19,9 @@ static void ChangePinMode(uint8_t mode)
 }
 
 
-static void DHT22_StartAcquisition(void)
+void DHT22_StartAcquisition(void)
 {
-    //Nombre d'iterations pour 30uSec
-    uint32_t whileIterations = 30 * ((SystemCoreClock / 1000000)/3);
-
+    DWT_Init();
     //Met le pin en sortie
     ChangePinMode(1);
 
@@ -30,53 +29,51 @@ static void DHT22_StartAcquisition(void)
     HAL_GPIO_WritePin(GPIO_DHT22, PIN_DHT22, 0);
 
     //délai de 2 millisecondes
-    HAL_Delay(2);
+    DWT_Delay(2000);
 
     //Met le pin à Vcc
     HAL_GPIO_WritePin(GPIO_DHT22, PIN_DHT22, 1);
 
     //Délai de 30 microsecondes
-    while (whileIterations--);
+    DWT_Delay(30);
 
     //Met le pin en entrée
     ChangePinMode(0);
 }
 
 //Lecture des 5 octets
-static void DHT22_ReadRaw(uint8_t *data)
+void DHT22_ReadRaw(uint8_t *data)
 {
-    uint32_t rawBits = 0UL;
+    uint32_t rawBits = 0;
     uint8_t checksumBits = 0;
-    uint32_t delayWhile = (SystemCoreClock / 800000);
 
-    while (!HAL_GPIO_ReadPin(GPIO_DHT22, PIN_DHT22));
-    while (HAL_GPIO_ReadPin(GPIO_DHT22, PIN_DHT22));
+    while (!READ_PIN);
+    while (READ_PIN);
 
+    //Lecture des 4 premiers octets de data
     for (int8_t i = 31; i >= 0; i--){
-        uint32_t iterationCount = 0;
+
         while (READ_PIN==0);
 
-        while (READ_PIN>0){
-            iterationCount++;
-        }
-        if (iterationCount>delayWhile)
-        {
-            rawBits |= (1UL << i);
-        }
+        DWT_Delay(40);
+
+        if (READ_PIN>0) rawBits |= (1 << i);
+        
+        while (READ_PIN>0);
+
     }
 
+    //Lecture du dernier octet de checksum
     for (int8_t i = 7; i >= 0; i--)
     {
-        uint32_t iterationCount = 0;
+
         while (READ_PIN==0);
 
-        while (READ_PIN>0){
-            iterationCount++;
-        }
-        if (iterationCount>delayWhile)
-        {
-            checksumBits |= (1UL << i);
-        }
+        DWT_Delay(40);
+        
+        if (READ_PIN>0) checksumBits |= (1 << i);
+
+        while (READ_PIN>0);
     }
 
     //Copie les données brutes dans le data
