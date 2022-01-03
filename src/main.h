@@ -22,6 +22,9 @@ void readTemp_Send();
 #define     GPIO_RF             GPIOB
 #define     GPIO_PIN_RF         GPIO_PIN_10
 
+/** RCSwitch header */
+#define     HEADER              73
+
 /** LED */
 #define     LED_PIN             GPIO_PIN_5
 #define     LED_GPIO_PORT       GPIOA

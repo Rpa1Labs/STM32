@@ -89,8 +89,8 @@ void readTemp_Send()
   InitRcSwitch();
   enableTransmit();
 
-  uint16_t Temp = 0.0;
-  uint16_t Hyd = 0.0;
+  uint16_t Temp = 0;
+  uint16_t Hyd = 0;
   uint8_t status = 0;
 
   while(!status){
@@ -100,7 +100,12 @@ void readTemp_Send()
   LED_Init();
   HAL_GPIO_TogglePin(LED_GPIO_PORT, LED_PIN);
 
-  send((uint32_t) Temp,24);
+  uint32_t sendData = Temp;
+
+  // Ajout d'un header pour éviter les conflits
+  sendData |= (HEADER << 16);
+
+  send(sendData,24);
 
   
 }
